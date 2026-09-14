@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ${TDP_APPLICATIONS}
+  namespace: ${ARGOCD_NAMESPACE}
+  labels:
+    tecnisys.io/cluster: tdp
+  annotations:
+    argocd.argoproj.io/description: |
+      Bootstrap de aplicacoes TDP
+spec: 
+  project: ${TDP_NAMESPACE}
+  source:
+    repoURL: '${GIT_REPO_URL}'
+    path: current
+    directory:
+      recurse: true
+    targetRevision: main
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: ${TDP_NAMESPACE}
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: true
+    

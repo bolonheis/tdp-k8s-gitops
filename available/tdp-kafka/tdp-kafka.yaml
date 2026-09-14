@@ -1,0 +1,34 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: tdp-kafka
+  namespace: ${TDP_PROJECT_NAMESPACE}
+  labels:
+    tecnisys.io/cluster: tdp
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: ${TDP_NAMESPACE}
+
+  sources:
+  - repoURL: ${HELM_CHART_REPO_URL}
+    targetRevision: ${HELM_CHART_VERSION}
+    chart: tdp-kafka
+    helm:
+      valueFiles:
+      - $values/current/tdp-kafka/values.yaml
+  
+  - repoURL: '${GIT_REPO_URL}'
+    targetRevision: main
+    ref: values
+
+  destination:
+    server: ${KUBERNETES_SERVER}
+    namespace: ${TDP_NAMESPACE}
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
