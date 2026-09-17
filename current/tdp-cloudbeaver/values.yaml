@@ -45,7 +45,7 @@ tdp-cloudbeaver:
 
   # Container port configuration
   containerPorts:
-    http: 8980
+    http: 8978
 
   # Service configuration
   service:
