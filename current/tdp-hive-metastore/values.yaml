@@ -1,0 +1,113 @@
+global:
+  security:
+    allowInsecureImages: true
+
+tdp-hive-metastore:
+  enabled: true
+
+  # Common labels applied to TDP helper jobs (RBAC/db-create/db-check/cleanup)
+  # AND, per the upstream hive-metastore chart's templates, directly to the
+  # metastore and postgres Deployments' own metadata.labels (as well as their
+  # selector/pod-template labels) — verified via `helm template`, exactly
+  # once per resource. The tecnisys.com/* pair opts those Deployments into
+  # tdp-license-operator enforcement — see
+  # stack/manifests/platform/tdp-platform-license.yaml (one shared whole-platform policy). Remove the two
+  # tecnisys.com/* labels to opt this chart out of enforcement.
+  commonLabels:
+    tecnisys.io/cluster: tdp
+    tecnisys.com/licensed: "true"
+    tecnisys.com/product: tdp-hive-metastore
+
+  # Image pull secrets for pulling images from private registries
+  imagePullSecrets:
+    - name: tdp-registry
+
+  # Security defaults used by helper jobs and upstream workloads.
+  podSecurityContext:
+    seccompProfile:
+      type: RuntimeDefault
+
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: false
+    seccompProfile:
+      type: RuntimeDefault
+    capabilities:
+      drop:
+        - ALL
+
+  # PostgreSQL configuration.
+  # - enabled=true: use the embedded PostgreSQL (upstream subchart).
+  # - enabled=false: use an external PostgreSQL (and enable TDPConfigurations.externalDatabase).
+  postgres:
+    enabled: true
+
+    # External PostgreSQL endpoint (only used when postgres.enabled=false).
+    external:
+      host: "<POSTGRESQL_HOST>"
+      port: 5432
+
+    # Database settings (used by both internal and external).
+    database: hive
+    username: hive
+    # If you use a fixed password, set it here or via an existing Secret.
+    # When using external PostgreSQL with TDP hooks enabled, a Secret is created automatically
+    # with a generated password: <release>-hive-database.
+    password: "hive"
+
+    # Security context overrides specific to the internal postgres Deployment.
+    # runAsUser: 999 (postgres uid) causes the entrypoint to skip the root-level
+    # chown/chmod initialization — required when capabilities.drop: ALL is enforced.
+    # fsGroup: 999 ensures the PVC is accessible to the postgres group.
+    podSecurityContext:
+      fsGroup: 999
+      seccompProfile:
+        type: RuntimeDefault
+    containerSecurityContext:
+      runAsUser: 999
+      runAsNonRoot: true
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: false
+      seccompProfile:
+        type: RuntimeDefault
+      capabilities:
+        drop:
+          - ALL
+
+    # Use secret created by db-create-job (name will be constructed in template)
+    # existingSecret: "{{ .Release.Name }}-hive-database"
+    existingSecretPasswordKey: "password"
+
+  # Metastore configuration.
+  # Define the type of metastore storage: 'file' or 's3'.
+  metastore:
+    image: registry.tecnisys.com.br/tdp/images/hive-metastore:4.0.0-1
+    type: file
+
+    file:
+      warehouseDir: /opt/hive/warehouse
+
+    # S3 settings used when metastore.type=s3.
+    s3:
+      warehouseDir: s3a://warehouse/hive
+      bucket: warehouse
+      endpoint: "http://<S3_SERVICE>.<NAMESPACE>.svc.cluster.local:9000"
+      accessKey: "<S3_ACCESS_KEY>"
+      secretKey: "<S3_SECRET_KEY>"
+      pathStyleAccess: true
+      region: us-east-1
+
+# TDP-specific settings (hooks and integrations)
+TDP-Settings:
+  externalDatabase:
+    # Enable TDP database hooks that validate/provision an external PostgreSQL.
+    # This should be used together with: tdp-hive-metastore.postgres.enabled=false
+    enabled: false
+
+    # If true, the db-create-job will drop and recreate the database/user when installing/upgrading.
+    recreate: false
+
+    # Secret containing the superuser password used by the db-create/db-check jobs.
+    # Expected key: postgres-password
+    externalSecret:
+      releaseName: "tdp-postgresql-project"

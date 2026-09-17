@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argo-gitops-tdp-ingestion
+  namespace: argocd
+  labels:
+    tecnisys.io/cluster: tdp
+  annotations:
+    argocd.argoproj.io/description: |
+      Bootstrap applications for TDP
+spec: 
+  project: tdp-ingestion
+  source:
+    repoURL: 'https://github.com/tdp-project/tdp-ingestion.git'
+    path: current
+    directory:
+      recurse: true
+    targetRevision: main
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: tdp-ingestion
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: true
+    
