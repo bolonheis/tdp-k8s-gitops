@@ -46,7 +46,7 @@ tdp-openmetadata:
   # Deployment (omjobOperator.enabled defaults to false upstream). Revisit if
   # a future rollout enables the OMJob operator.
   omjobOperator:
-    enabled: false
+    enabled: true
 
   # OpenMetadata configuration overrides
   # IMPORTANT: This block maps to .Values.openmetadata.config in the upstream
