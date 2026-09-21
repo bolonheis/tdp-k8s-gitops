@@ -43,7 +43,7 @@ tdp-airflow:
 
   # Use standard naming for all resources using airflow.fullname template.
   # WARNING: Enabling this may rename resources and recreate PVCs.
-  useStandardNaming: false
+  useStandardNaming: true
 
   # Max number of old ReplicaSets to retain (can be overridden per component)
   revisionHistoryLimit: ~
